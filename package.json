@@ -1,0 +1,45 @@
+{
+  "name": "dsh-feishu-bridge",
+  "version": "1.0.0",
+  "description": "Feishu (Lark) ↔ DeepSeek Harness bridge over a self-built app's WebSocket long connection: deliver IM messages into a DSH session and reply from the session back to the chat. Zero third-party dependencies.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/feishu.mjs",
+    "lib/feishu-resource.mjs",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node test/selftrigger.test.mjs"
+  },
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "dsh-plugin",
+    "feishu",
+    "lark",
+    "webhook",
+    "long-connection",
+    "bot",
+    "im"
+  ],
+  "license": "MIT",
+  "author": "Abyss",
+  "engines": {
+    "node": ">=22"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}
