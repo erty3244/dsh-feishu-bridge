@@ -1,0 +1,7 @@
+node_modules/
+*.log
+*.bak-*
+feishu-config.json
+feishu-target-session.txt
+feishu-plugin-state.json
+.dsh/
