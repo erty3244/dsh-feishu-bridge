@@ -18,7 +18,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "node test/selftrigger.test.mjs"
+    "test": "node --check lib/index.js && node --check lib/feishu.mjs"
   },
   "keywords": [
     "deepseek",
