@@ -12,12 +12,13 @@
 
 DSH 跑在自己电脑上，人经常不在电脑前。这个插件让飞书成为本地 DSH 的输入输出口：
 
-- **入站**：飞书消息 → 投递进指定 DSH 会话（默认把发送者、chat、消息 id 一起带上）
+- **入站**：飞书消息 → 投递进指定 DSH 会话（文字与图片一起带上；投递请求带飞书 `message_id`）
 - **出站**：该会话这一轮的最终回复 → 发回同一条私聊或群
 - **不串线**：每一轮与触发它的那条消息用 `rpcId` 精确配对，并发时也不会把 A 的回答回给 B
 - **不重复**：状态文件里记 message_id，重连后补送的旧消息不会被执行两遍；延迟送达会标注「晚了 N 分钟」
 - **可换绑**：目标会话写在 `bindingFile` 里，只有一行，改完下一轮生效，不用重启
-- **折叠注入（可选）**：从系统侧主动注入的消息（下面「自由时间」就是）会带 `source.kind / form:'notice'`，在对话界面里显示成上下文条目，而不是伪装成用户说的话
+
+> 自触发（自由时间 / 预约任务）已拆出，见 dsh-self-trigger。本仓库只做飞书桥接：入站投递 + 出站回帖。
 
 ## 安装
 
@@ -70,12 +71,7 @@ dsh plugin --profile desktop add ./dsh-feishu-bridge
 - 也可以直接在 config 里写 `sessionId`，`bindingFile` 优先生效。
 - **白名单留空等于谁都不放行**，不是放行所有人——这点别反着理解。
 - 密钥可以不放明文：配 `appSecretRef` + DSH 的凭证机制（`ctx.credentials.resolve`），配置文件里只留引用名。
-
-## 可选：自由时间（self-trigger）
-
-插件里带了一个「定时判定 + 概率累计 + 四选一」的主动行为模块：每隔一小时判定一次，掷骰子决定这次自由时间是「上网 / 翻文件 / 找你说话 / 什么都不发」，命中前每次落空累计 +N% 概率。
-
-**默认是关的。** 打开需要再加一个策略文件（`selftrigger-policy.json`，`enabled: true`），并且想清楚一件事：它会让 AI 在你没说话的时候主动占用一次模型调用。不需要就别开。
+- 默认值：**自动回帖默认开**（只有显式写 `autoReply: false` 才关）；回执文字 `ackText` 默认「已收到」；`dryRun` 默认关。
 
 ## 安全与权限声明
 
@@ -86,7 +82,7 @@ dsh plugin --profile desktop add ./dsh-feishu-bridge
 | `network` | 只连 `open.feishu.cn`（长连接 WSS + 发消息 / 取资源 HTTPS） |
 | `fs-read` | 读 `configPath`、`bindingFile` |
 | `fs-write` | 只写 `stateDir` 下的状态、日志、心跳 |
-| `host-runtime` | `sessionController.resolveAgent` + `agent.followup` 投递消息 |
+| `host-runtime` | `sessionController.prompt` 投递消息 |
 | `credentials`（可选） | 仅在配了 `appSecretRef` 时读一个具名凭证 |
 
 不做的事：不开子进程、不执行 shell、不扫描磁盘、不读凭据文件、不上报任何遥测。
@@ -94,14 +90,14 @@ dsh plugin --profile desktop add ./dsh-feishu-bridge
 ## 兼容性
 
 - 测于 DSH `0.2.1-rc.2`（desktop profile），Node ≥ 22
-- 依赖的宿主接口：`ctx.sessionController`（`resolveAgent` / `prompt`）、`ctx.on('session/event')`、`ctx.credentials.resolve`
+- 依赖的宿主接口：`ctx.sessionController.prompt`、`ctx.on('session/event')`、`ctx.credentials.resolve`
 - DSH 的内部接口会变。插件里对拿不到的对象都做了兜底与日志，宿主升级后先看 `stateDir` 下的日志再升级
 
 ## 已知限制
 
 - 消息投递进来时，目标会话必须「活着」（在侧栏点开过一次）；否则会返回错误并要求先打开
 - 如果目标会话的历史里带坏了的数据（模型接口直接 400），任何新轮次都会失败——换一个新会话再改 `bindingFile` 即可
-- 群消息默认不逐条转（避免刷屏），要按 @ 过滤请配合外部轮询脚本
+- 群消息不做 @ 过滤：白名单内的会话，每条消息都会触发一轮；人多的群建议只把私聊 `chat_id` 放进 `allowChatIds`
 
 ## License
 
